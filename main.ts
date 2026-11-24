@@ -1,12 +1,15 @@
 // A working gta6-01 entry (Node 22, standard library only): the game is this directory's
 // game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
-// modules, no library and no network request), and the program hands it in. It copies game/ and
-// screenshots/ from beside this file to /output and writes /output/dossier.json, the summary the
-// judge reads, with the vendored make.fun library. Only the plumbing, not an open world: Block
-// Dodger, a plain 2D canvas game where a paddle dodges falling blocks and catches coins, with a
-// title screen, score, lives and levels, game over and restart, flat colours and no sound. Build
-// your own open-world crime game in its place (three.js or any library you vendor under game/),
-// put your 3 or 4 PNG or JPEG screenshots in screenshots/ (the first by name is the cover) and run it.
+// modules, three.js vendored under game/vendor/, no network request), and the program hands it
+// in. It copies game/ and screenshots/ from beside this file to /output and writes
+// /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
+//
+// The game is Cahaya Bay: a complete 3D open-world crime game in the spirit of GTA 6. A
+// sun-soaked coastal city with five districts, explored on foot and by car; steal cars, outrun
+// the police through a 1-5 star wanted system, and play six story missions as Raka, a former
+// street racer saving his father's garage from the Laskar Senja gang. HUD with a live minimap,
+// synthesized WebAudio sound and three radio stations, and a localStorage save. Put your 3 or 4
+// PNG or JPEG screenshots in screenshots/ (the first by name is the cover) and run it.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>CAHAYA BAY — Game 3D Open-World</title>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<style>
+:root {
+  --navy: #0a1626; --navy2: #12233a; --coral: #ff6a4d; --amber: #ffc247; --teal: #2fd3c0; --cream: #fff6e5; --red: #ff3d3d; --blue: #3a7aff;
+  --glass: rgba(9, 18, 32, 0.62); --edge: rgba(255, 255, 255, 0.16);
+  --display: Impact, 'Arial Narrow Bold', 'Haettenschweiler', 'Arial Black', sans-serif;
+  --body: 'Trebuchet MS', 'Segoe UI', Verdana, Tahoma, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; user-select: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a1626; color: var(--cream); font-family: var(--body); }
+canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+button { font-family: var(--body); cursor: pointer; }
+b { color: var(--amber); font-weight: 700; }
+
+/* ---------- loading ---------- */
+#loading { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: radial-gradient(ellipse at 50% 70%, #ff7a4d 0%, #c2465e 28%, #4a2a6a 58%, #0a1626 100%); transition: opacity 0.8s ease; }
+#loading.done { opacity: 0; pointer-events: none; }
+.sunlogo { width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(180deg, #ffe08a 0%, #ff9a4a 50%, #ff4d6a 100%);
+  box-shadow: 0 0 80px 20px rgba(255, 150, 80, 0.55); position: relative; overflow: hidden; animation: floaty 3s ease-in-out infinite; }
+.sunlogo::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 46%;
+  background: repeating-linear-gradient(180deg, transparent 0 6px, rgba(10, 22, 38, 0.85) 6px 10px); }
+@keyframes floaty { 50% { transform: translateY(-8px); } }
+.logoText { font-family: var(--display); font-size: clamp(42px, 8vw, 84px); letter-spacing: 0.08em; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.25), 0 0 30px rgba(255, 170, 90, 0.6); }
+.loadWrap { width: min(420px, 80vw); height: 10px; background: rgba(255, 255, 255, 0.18); border-radius: 6px; overflow: hidden; }
+#loadBar { height: 100%; width: 0; background: linear-gradient(90deg, var(--amber), var(--coral)); transition: width 0.25s; }
+#loadText { font-size: 15px; letter-spacing: 0.04em; opacity: 0.95; text-align: center; padding: 0 16px; }
+#loadTip { font-size: 13px; opacity: 0.7; max-width: 520px; text-align: center; padding: 0 16px; font-style: italic; }
+
+/* ---------- menu ---------- */
+#menu { position: fixed; inset: 0; z-index: 50; display: none; align-items: stretch;
+  background: linear-gradient(90deg, rgba(8, 16, 30, 0.88) 0%, rgba(8, 16, 30, 0.55) 38%, rgba(8, 16, 30, 0) 70%); }
+#menu.on { display: flex; }
+.menuCol { width: min(640px, 100%); padding: clamp(24px, 6vh, 70px) clamp(24px, 5vw, 64px); display: flex; flex-direction: column; justify-content: center; gap: 10px; position: relative; }
+.title { font-family: var(--display); font-size: clamp(44px, 7.4vw, 100px); line-height: 0.92; letter-spacing: 0.03em; padding-right: 0.2em; white-space: nowrap;
+  background: linear-gradient(180deg, #fff3c4 0%, #ffc247 38%, #ff6a4d 78%, #d2365a 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 24px rgba(255, 140, 70, 0.4)); }
+.tagline { font-size: clamp(13px, 1.6vw, 17px); letter-spacing: 0.3em; text-transform: uppercase; color: var(--teal); margin-bottom: 22px; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+#menuMain { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); }
+.btn { display: block; width: 100%; text-align: left; padding: 13px 20px; font-size: 17px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--cream); background: rgba(14, 28, 48, 0.72); border: 1px solid var(--edge); border-left: 4px solid var(--coral); border-radius: 4px;
+  transition: transform 0.12s, background 0.12s, border-color 0.12s; backdrop-filter: blur(4px); }
+.btn:hover:not(:disabled) { background: rgba(255, 106, 77, 0.28); transform: translateX(8px); border-left-color: var(--amber); }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn.sel { background: rgba(47, 211, 192, 0.3); border-left-color: var(--teal); }
+.btn.small { width: auto; display: inline-block; padding: 9px 18px; font-size: 14px; }
+.menuFoot { position: fixed; left: clamp(24px, 5vw, 64px); bottom: 18px; font-size: 12px; opacity: 0.6; letter-spacing: 0.05em; }
+.panel { display: none; flex-direction: column; gap: 12px; background: var(--glass); border: 1px solid var(--edge); border-radius: 8px; padding: 22px 24px; width: min(480px, 100%); backdrop-filter: blur(8px); }
+.panel.on { display: flex; }
+.panel h2 { font-family: var(--display); font-size: 30px; letter-spacing: 0.1em; color: var(--amber); font-weight: normal; }
+.ctl { display: grid; grid-template-columns: 150px 1fr; gap: 6px 14px; font-size: 14px; }
+.ctl dt { color: var(--amber); font-weight: 700; } .ctl dd { opacity: 0.95; }
+.row { display: flex; flex-direction: column; gap: 6px; font-size: 14px; letter-spacing: 0.05em; }
+.row label { display: flex; justify-content: space-between; }
+input[type=range] { width: 100%; accent-color: var(--coral); height: 6px; }
+.qrow { display: flex; gap: 8px; }
+.qrow .btn { text-align: center; padding: 9px 6px; font-size: 13px; }
+#panelSettings { position: relative; z-index: 60; }
+
+/* ---------- pause / overlays ---------- */
+#pause { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(6, 12, 22, 0.62); backdrop-filter: blur(5px); }
+#pause.on { display: flex; }
+#pause .box { width: min(360px, 90vw); display: flex; flex-direction: column; gap: 10px; }
+#pause h2 { font-family: var(--display); font-size: 54px; letter-spacing: 0.12em; font-weight: normal; margin-bottom: 8px; color: var(--amber); text-align: center; }
+#overlay { position: fixed; inset: 0; z-index: 70; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; pointer-events: none; }
+#overlay.on { display: flex; pointer-events: auto; }
+#overlay.wasted { background: radial-gradient(ellipse at center, rgba(120, 0, 0, 0.1), rgba(60, 0, 0, 0.72)); }
+#overlay.busted { background: radial-gradient(ellipse at center, rgba(0, 30, 120, 0.1), rgba(0, 12, 60, 0.74)); }
+#overTitle { font-family: var(--display); font-size: clamp(70px, 14vw, 170px); letter-spacing: 0.1em; text-shadow: 0 6px 0 rgba(0,0,0,0.4); animation: pop 0.5s cubic-bezier(.2,1.6,.4,1) both; }
+#overlay.wasted #overTitle { color: #ff3d3d; } #overlay.busted #overTitle { color: #6aa0ff; }
+#overSub { font-size: 18px; opacity: 0.9; text-align: center; padding: 0 20px; }
+@keyframes pop { from { transform: scale(2.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---------- briefing + fail ---------- */
+#briefing, #failScreen { position: fixed; inset: 0; z-index: 65; display: none; align-items: center; justify-content: center; background: rgba(5, 10, 20, 0.55); backdrop-filter: blur(3px); }
+#briefing.on, #failScreen.on { display: flex; }
+.card { width: min(720px, 92vw); background: linear-gradient(160deg, rgba(20, 36, 60, 0.96), rgba(10, 18, 32, 0.96)); border: 1px solid var(--edge); border-top: 4px solid var(--amber);
+  border-radius: 8px; padding: 28px 34px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); animation: rise 0.4s ease both; }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+#briefNum { font-size: 13px; letter-spacing: 0.3em; color: var(--teal); }
+#briefTitle, #failTitle { font-family: var(--display); font-size: clamp(36px, 6vw, 58px); letter-spacing: 0.06em; color: var(--amber); margin: 4px 0 14px; font-weight: normal; }
+#briefText { font-size: 17px; line-height: 1.55; min-height: 190px; white-space: pre-line; color: #f4ecdc; }
+#briefReward { margin-top: 10px; color: var(--teal); font-weight: 700; letter-spacing: 0.06em; }
+.cardFoot { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; gap: 12px; }
+.cardFoot .hintk { font-size: 12px; opacity: 0.6; }
+#failScreen .card { border-top-color: var(--red); } #failTitle { color: #ff6a6a; } #failReason { font-size: 18px; margin-bottom: 8px; }
+
+/* ---------- HUD ---------- */
+#hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; display: none; font-weight: 700; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.75); }
+#hud .glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 6px; backdrop-filter: blur(3px); }
+#damageVignette { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(220, 20, 20, 0.75) 100%); }
+#minimapWrap { position: absolute; left: 20px; bottom: 56px; width: 210px; height: 210px; border-radius: 50%; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55); }
+#minimap { width: 210px; height: 210px; display: block; }
+#district { position: absolute; left: 20px; bottom: 270px; font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; padding: 3px 10px; }
+#vitals { position: absolute; left: 244px; bottom: 56px; width: 220px; display: flex; flex-direction: column; gap: 6px; }
+.bar { height: 16px; background: rgba(0, 0, 0, 0.55); border: 1px solid var(--edge); border-radius: 3px; overflow: hidden; position: relative; }
+.bar > i { display: block; height: 100%; width: 100%; transition: width 0.15s; }
+#hpFill { background: linear-gradient(90deg, #3ed97a, #9aea4a); } #hpFill.low { background: linear-gradient(90deg, #e0302a, #ff6a4a); animation: pulse 0.6s infinite alternate; }
+#armorFill { background: linear-gradient(90deg, #2e7fff, #7ac0ff); width: 0; }
+.bar span { position: absolute; right: 6px; top: -1px; font-size: 12px; }
+@keyframes pulse { to { filter: brightness(1.6); } }
+#topright { position: absolute; right: 22px; top: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+#money { font-family: var(--display); font-size: 40px; letter-spacing: 0.04em; color: #b6ff7a; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5), 0 0 14px rgba(120, 255, 100, 0.35); font-weight: normal; }
+#clock { font-size: 20px; letter-spacing: 0.15em; color: var(--cream); padding: 2px 12px; }
+#stars { display: flex; gap: 4px; }
+.star { font-size: 34px; line-height: 1; color: rgba(255, 255, 255, 0.22); -webkit-text-stroke: 1px rgba(0, 0, 0, 0.5); }
+.star::before { content: '★'; } .star.on { color: #ffd23a; text-shadow: 0 0 12px rgba(255, 190, 40, 0.9); } .star.blink { animation: blink 0.45s infinite alternate; }
+@keyframes blink { from { opacity: 1; } to { opacity: 0.25; } }
+#toasts { position: absolute; right: 22px; top: 126px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 420px; }
+.toast { padding: 7px 14px; font-size: 15px; background: var(--glass); border-right: 4px solid var(--teal); border-radius: 4px; animation: slideIn 0.3s ease both; transition: opacity 0.4s; }
+.toast.good { border-right-color: #7aff7a; color: #d8ffd0; } .toast.warn { border-right-color: var(--coral); color: #ffd9cf; } .toast.out { opacity: 0; }
+@keyframes slideIn { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+#objective { position: absolute; left: 22px; top: 18px; width: min(430px, 44vw); padding: 12px 16px; border-left: 5px solid var(--amber); display: none; }
+#objective small { display: block; font-size: 11px; letter-spacing: 0.3em; color: var(--amber); margin-bottom: 4px; }
+#objectiveText { font-size: 18px; line-height: 1.25; }
+#objMeta { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 14px; color: var(--teal); }
+#objArrow { display: none; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 18px solid var(--amber); filter: drop-shadow(0 0 4px #000); }
+#objTimer { display: none; background: rgba(255, 61, 61, 0.85); color: #fff; padding: 1px 10px; border-radius: 3px; font-size: 16px; letter-spacing: 0.1em; }
+#hintText { font-size: 13px; font-weight: 400; opacity: 0.85; margin-top: 5px; }
+#speedo { position: absolute; right: 24px; bottom: 56px; width: 150px; height: 150px; display: none; }
+#speedCanvas { position: absolute; inset: 0; }
+#speedNum { position: absolute; left: 0; right: 0; top: 52px; text-align: center; font-family: var(--display); font-size: 40px; font-weight: normal; }
+#speedo small { position: absolute; left: 0; right: 0; top: 96px; text-align: center; font-size: 11px; letter-spacing: 0.25em; opacity: 0.7; }
+#radioName { position: absolute; left: -52px; right: -52px; top: 156px; text-align: center; font-size: 13px; letter-spacing: 0.12em; color: var(--teal); transition: color 0.2s, transform 0.2s; }
+#radioName.flash { color: var(--amber); transform: scale(1.18); }
+#carHp { position: absolute; left: 0; right: 0; top: 176px; height: 7px; }
+#carHp .bar { height: 7px; } #carHpFill { background: linear-gradient(90deg, #ffd23a, #ff9a3a); } #carHpFill.low { background: #ff3a3a; }
+#weaponBox { position: absolute; right: 24px; bottom: 56px; padding: 8px 16px; font-size: 20px; letter-spacing: 0.1em; display: block; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; display: none; }
+#crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 3px #000; }
+#crosshair::before { left: 12px; top: 0; width: 2px; height: 26px; clip-path: polygon(0 0, 100% 0, 100% 36%, 0 36%, 0 64%, 100% 64%, 100% 100%, 0 100%); }
+#crosshair::after { top: 12px; left: 0; height: 2px; width: 26px; clip-path: polygon(0 0, 36% 0, 36% 100%, 0 100%, 64% 0, 100% 0, 100% 100%, 64% 100%); }
+#hitMarker { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; opacity: 0; transform: rotate(45deg); }
+#hitMarker.on { opacity: 1; } #hitMarker::before, #hitMarker::after { content: ''; position: absolute; background: #ff4a4a; }
+#hitMarker.head::before, #hitMarker.head::after { background: #ffd23a; }
+#hitMarker::before { left: 15px; top: 3px; width: 4px; height: 28px; } #hitMarker::after { top: 15px; left: 3px; height: 4px; width: 28px; }
+#prompt { position: absolute; left: 50%; bottom: 190px; transform: translateX(-50%); padding: 9px 22px; font-size: 20px; letter-spacing: 0.06em; opacity: 0; transition: opacity 0.15s; color: #fff; }
+#prompt.on { opacity: 1; }
+#subtitle { position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); width: min(780px, 86vw); padding: 10px 20px; text-align: center; opacity: 0; transition: opacity 0.25s; }
+#subtitle.on { opacity: 1; }
+#subSpeaker { display: block; font-size: 13px; letter-spacing: 0.25em; color: var(--amber); text-transform: uppercase; margin-bottom: 2px; }
+#subText { font-size: 20px; font-weight: 600; line-height: 1.3; }
+#bossBar { position: absolute; left: 50%; top: 86px; transform: translateX(-50%); width: min(520px, 60vw); display: none; text-align: center; }
+#bossBar.on { display: block; } #bossName { font-family: var(--display); letter-spacing: 0.25em; font-size: 20px; font-weight: normal; color: #ffb06a; }
+#bossFill { background: linear-gradient(90deg, #ff3d3d, #ff9a3a); width: 100%; }
+#arrestBar { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); width: 280px; text-align: center; display: none; }
+#arrestBar.on { display: block; } #arrestFill { background: linear-gradient(90deg, #3a7aff, #8ab4ff); width: 0; } #arrestBar span { font-size: 14px; letter-spacing: 0.3em; color: #9fc0ff; }
+#banner { position: absolute; left: 0; right: 0; top: 22%; text-align: center; opacity: 0; }
+#banner.on { animation: bannerIn 3.2s ease both; }
+#banner.win.on { animation-duration: 4.6s; }
+#bannerTitle { font-family: var(--display); font-size: clamp(46px, 8vw, 96px); letter-spacing: 0.12em; color: var(--amber); text-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 150, 60, 0.55); font-weight: normal; }
+#banner.win #bannerTitle { color: #ffe36a; }
+#bannerSub { font-size: clamp(20px, 3vw, 30px); letter-spacing: 0.2em; text-transform: uppercase; }
+#bannerExtra { font-family: var(--display); font-size: 40px; color: #b6ff7a; margin-top: 6px; }
+@keyframes bannerIn { 0% { opacity: 0; transform: scale(1.5); } 10% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px); } }
+#countdown { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-family: var(--display); font-size: clamp(90px, 18vw, 220px); color: #fff; opacity: 0; text-shadow: 0 8px 0 rgba(0,0,0,0.4), 0 0 40px rgba(255, 170, 60, 0.7); }
+#countdown.on { animation: countPop 0.9s ease both; } @keyframes countPop { 0% { opacity: 0; transform: scale(2.2); } 20% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(0.8); } }
+#districtBanner { position: absolute; left: 0; right: 0; top: 36%; text-align: center; font-family: var(--display); font-size: clamp(30px, 5vw, 56px); letter-spacing: 0.4em; opacity: 0; color: var(--cream); text-shadow: 0 3px 0 rgba(0,0,0,0.4); }
+#districtBanner.on { animation: distIn 2.6s ease both; } @keyframes distIn { 0% { opacity: 0; letter-spacing: 0.9em; } 20% { opacity: 0.95; letter-spacing: 0.4em; } 75% { opacity: 0.95; } 100% { opacity: 0; } }
+#controlsHint { position: absolute; left: 20px; bottom: 16px; font-size: 12px; font-weight: 400; letter-spacing: 0.04em; padding: 5px 12px; opacity: 0.88; }
+#mutedIcon { position: absolute; right: 22px; bottom: 16px; display: none; font-size: 13px; padding: 4px 10px; color: #ff9a8a; }
+</style>
+</head>
+<body>
+<canvas id="game" tabindex="0"></canvas>
+
+<div id="loading">
+  <div class="sunlogo"></div>
+  <div class="logoText">CAHAYA BAY</div>
+  <div class="loadWrap"><div id="loadBar"></div></div>
+  <div id="loadText">Memuat…</div>
+  <div id="loadTip"></div>
+</div>
+
+<div id="menu">
+  <div class="menuCol">
+    <div class="title">CAHAYA<br>BAY</div>
+    <div class="tagline">Kota pesisir · Satu kesempatan terakhir</div>
+    <div id="menuMain">
+      <button class="btn" id="btnNew">New Game</button>
+      <button class="btn" id="btnContinue" disabled>Continue</button>
+      <button class="btn" id="btnControls">Controls</button>
+      <button class="btn" id="btnSettings">Settings</button>
+    </div>
+    <div class="panel" id="panelControls">
+      <h2>CONTROLS</h2>
+      <dl class="ctl">
+        <dt>WASD</dt><dd>Bergerak / mengemudi</dd>
+        <dt>Mouse</dt><dd>Putar kamera (panah keyboard juga bisa)</dd>
+        <dt>Shift</dt><dd>Lari</dd>
+        <dt>Spasi</dt><dd>Lompat / rem tangan</dd>
+        <dt>E</dt><dd>Masuk/keluar mobil &amp; interaksi</dd>
+        <dt>F atau klik kiri</dt><dd>Pukul</dd>
+        <dt>Klik kiri</dt><dd>Tembak (saat bersenjata)</dd>
+        <dt>1 / 2</dt><dd>Ganti senjata</dd>
+        <dt>R</dt><dd>Reload</dd>
+        <dt>H</dt><dd>Klakson</dd>
+        <dt>L</dt><dd>Lampu mobil</dd>
+        <dt>Q</dt><dd>Ganti stasiun radio</dd>
+        <dt>M</dt><dd>Mute</dd>
+        <dt>Esc</dt><dd>Pause</dd>
+      </dl>
+      <button class="btn small" id="btnBackControls">← Kembali</button>
+    </div>
+    <div class="panel" id="panelSettings">
+      <h2>SETTINGS</h2>
+      <div class="row"><label for="setVolume"><span>Volume</span><span id="volVal">70%</span></label><input type="range" id="setVolume" min="0" max="100" value="70"></div>
+      <div class="row"><label for="setSens"><span>Sensitivitas mouse</span><span id="sensVal">1.00×</span></label><input type="range" id="setSens" min="30" max="250" value="100"></div>
+      <div class="row"><span>Kualitas grafis</span>
+        <div class="qrow"><button class="btn" id="qLow">Low</button><button class="btn sel" id="qMed">Med</button><button class="btn" id="qHigh">High</button></div>
+      </div>
+      <button class="btn small" id="btnBackSettings">← Kembali</button>
+    </div>
+  </div>
+  <div class="menuFoot">Enter: mulai · Semua grafis dan suara dibuat langsung di dalam kode · Offline penuh</div>
+</div>
+
+<div id="pause">
+  <div class="box">
+    <h2>PAUSE</h2>
+    <button class="btn" id="btnResume">Resume</button>
+    <button class="btn" id="btnRestart">Restart Mission</button>
+    <button class="btn" id="btnPauseSettings">Settings</button>
+    <button class="btn" id="btnQuit">Save &amp; Quit to Title</button>
+  </div>
+</div>
+
+<div id="overlay"><div id="overTitle"></div><div id="overSub"></div><button class="btn small" id="btnRespawn" style="display:none;margin-top:20px;text-align:center">Respawn [Enter]</button></div>
+
+<div id="briefing"><div class="card">
+  <div id="briefNum"></div><div id="briefTitle"></div><div id="briefText"></div><div id="briefReward"></div>
+  <div class="cardFoot"><span class="hintk">Enter / E untuk melewati teks dan mulai</span><button class="btn small" id="briefStart">Mulai Misi</button></div>
+</div></div>
+<div id="failScreen"><div class="card">
+  <div id="briefNum2" style="font-size:13px;letter-spacing:.3em;color:#ff8a8a">MISI GAGAL</div><div id="failTitle"></div><div id="failReason"></div>
+  <div class="cardFoot"><span class="hintk">Enter / E untuk mengulang</span><button class="btn small" id="failRetry">Ulangi Misi</button></div>
+</div></div>
+
+<div id="hud">
+  <div id="damageVignette"></div>
+  <div id="objective" class="glass"><small>MISI</small><div id="objectiveText"></div>
+    <div id="objMeta"><span id="objArrow"></span><span id="objDist"></span><span id="objTimer"></span></div><div id="hintText"></div></div>
+  <div id="topright"><div id="money">Rp 0</div><div id="clock" class="glass">11:30</div><div id="stars"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div></div>
+  <div id="toasts"></div>
+  <div id="district" class="glass">Marina</div>
+  <div id="minimapWrap"><canvas id="minimap"></canvas></div>
+  <div id="vitals"><div class="bar"><i id="hpFill"></i><span id="hpText">100</span></div><div class="bar" style="height:10px"><i id="armorFill"></i></div></div>
+  <div id="speedo"><canvas id="speedCanvas"></canvas><div id="speedNum">0</div><small>KM/H</small><div id="radioName">♪ Senja FM</div><div id="carHp"><div class="bar"><i id="carHpFill"></i></div></div></div>
+  <div id="weaponBox" class="glass"><span id="weaponText">TINJU</span></div>
+  <div id="crosshair"></div><div id="hitMarker"></div>
+  <div id="bossBar"><div id="bossName"></div><div class="bar"><i id="bossFill"></i></div></div>
+  <div id="arrestBar"><span>DITANGKAP…</span><div class="bar"><i id="arrestFill"></i></div></div>
+  <div id="subtitle" class="glass"><span id="subSpeaker"></span><span id="subText"></span></div>
+  <div id="prompt" class="glass"></div>
+  <div id="banner"><div id="bannerTitle"></div><div id="bannerSub"></div><div id="bannerExtra"></div></div>
+  <div id="countdown"></div>
+  <div id="districtBanner"></div>
+  <div id="controlsHint" class="glass"></div>
+  <div id="mutedIcon" class="glass">🔇 MUTE</div>
+</div>
+
+<script>
+// Static-file hint: ES modules need a local static server (file pages are blocked by the browser's module security).
+if (window.location.protocol === 'file:') {
+  window.addEventListener('DOMContentLoaded', function () {
+    var t = document.getElementById('loadText');
+    if (t) t.textContent = 'Buka lewat server statis lokal (mis. python3 -m http.server di folder game).';
+  });
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
